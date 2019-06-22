@@ -31,6 +31,11 @@
     @if (Model.ActionName != null)
     {
         <h3>@Model.ActionName</h3>
+        @if (Model.IsCollection)
+        {
+            <button>Previous</button>
+            <button>Next</button>
+        }
     }
     <table>
         @foreach (var prop in Model.SimpleProps ?? Enumerable.Empty<PropertyInfo>())
@@ -57,7 +62,7 @@
     {
         <h4>@prop.Name</h4>
         var element = Model.GetCollectionElement(prop);
-        var props = element.GetType().GetProperties().Where(p=>!p.PropertyType.Name.Contains("Collection"));
+        var props = element.GetType().GetProperties().Where(p => !p.PropertyType.Name.Contains("Collection"));
 
         <table>
             @foreach (var collProp in props)

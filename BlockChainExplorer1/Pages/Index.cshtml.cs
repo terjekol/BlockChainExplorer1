@@ -20,6 +20,8 @@ namespace BlockChainExplorer1.Pages
         public PropertyInfo[] CollectionProps { get; private set; }
         public IEnumerable<MethodInfo> Actions { get; private set; }
         public IEnumerable<string> ActionNames { get; private set; }
+        public bool IsCollection { get; private set; }
+
 
         private readonly Navigation[] _navigations =
         {
@@ -47,9 +49,21 @@ namespace BlockChainExplorer1.Pages
             await task.ConfigureAwait(false);
             var resultProperty = task.GetType().GetProperty("Result");
             var obj = resultProperty.GetValue(task);
+            obj = IfCollection(obj);
             obj = await IfLatestBlock(obj, explorer);
             Save(obj);
         }
+
+        private object IfCollection(object o)
+        {
+            var enumerable = o as IEnumerable;
+            if (enumerable == null) return o;
+            IsCollection = true;
+            var enumerator = enumerable.GetEnumerator();
+            enumerator.MoveNext();
+            return enumerator.Current;
+        }
+
 
         private object ConvertValue(string value, Type type)
         {
