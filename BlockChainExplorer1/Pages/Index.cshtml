@@ -1,0 +1,14 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div >
+    <table>
+        @foreach (var prop in Model.Props)
+        {
+            <tr><th>@prop.Name</th><td>@Model.GetValue(prop)</td></tr>
+        }
+    </table>
+</div>
