@@ -1,14 +1,75 @@
 ﻿@page
+@using System.Collections
+@using System.Collections.ObjectModel
+@using System.Reflection
 @model IndexModel
 @{
     ViewData["Title"] = "Home page";
 }
 
-<div >
-    <table>
-        @foreach (var prop in Model.Props)
+<div>
+    <div style="">
+        <select onchange="show('Get' + this.value + 'Async')">
+            @foreach (var action in Model.ActionNames)
+            {
+                <option>@action</option>
+            }
+        </select>
+        @foreach (var action in Model.Actions)
         {
-            <tr><th>@prop.Name</th><td>@Model.GetValue(prop)</td></tr>
+            <form id="@action.Name" style="display: none">
+                @Html.Hidden("actionName", action.Name)
+                @foreach (var param in action.GetParameters())
+                {
+                    @param.Name <input name="paramValue" type="@{ Model.InputTypeFromCsType(@param.ParameterType); }" />
+                }
+                <input type="submit" value="Search" />
+            </form>
+        }
+    </div>
+    @if (Model.ActionName != null)
+    {
+        <h3>@Model.ActionName</h3>
+    }
+    <table>
+        @foreach (var prop in Model.SimpleProps ?? Enumerable.Empty<PropertyInfo>())
+        {
+            var navigationActionName = Model.GetNavigationActionName(prop.Name);
+            var value = Model.GetValue(prop);
+            <tr>
+                <th>@prop.Name</th>
+                <td>
+                    @if (navigationActionName != null)
+                    {
+                        @Html.ActionLink(@value, "", new { actionName = navigationActionName, paramValue = value })
+                    }
+                    else
+                    {
+                        @value
+                    }
+                </td>
+            </tr>
         }
     </table>
+
+    @foreach (var prop in Model.CollectionProps ?? Enumerable.Empty<PropertyInfo>())
+    {
+        <h4>@prop.Name</h4>
+        var value = Model.GetValue(prop);
+        var collectionElementProps = Model.GetCollectionElementProps(prop);
+
+        <table style="padding-left: 10px">
+            @foreach (var collProp in collectionElementProps)
+            {
+                <tr><th>@collProp.Name</th></tr>
+            }
+        </table>
+    }
 </div>
+
+<script>
+    function show(actionName) {
+        for (var form of document.getElementsByTagName('form')) form.style.display = 'none';
+        document.getElementById(actionName).style.display = 'inline';
+    }
+</script>
