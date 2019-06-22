@@ -24,6 +24,9 @@ namespace BlockChainExplorer1.Pages
         private readonly Navigation[] _navigations =
         {
             new Navigation("Block", "PreviousBlockHash", "GetBlockByHash"),
+            new Navigation("Transaction", "Hash", "GetTransactionByHash"),
+            new Navigation("Transaction", "Index", "GetTransactionByIndex"),
+            new Navigation("Block", "Height", "BlocksAtHeight"),
         };
 
 
@@ -38,14 +41,22 @@ namespace BlockChainExplorer1.Pages
             var action = Actions.SingleOrDefault(a => a.Name.Contains(actionName));
             if (action == null) return;
             var explorer = new BlockExplorer();
-            var hasParam = action.GetParameters().Length > 0;
-            var param = hasParam ? new object[] { paramValue } : new object[] { };
-            var task = action.Invoke(explorer, param) as Task;
+            var param = action.GetParameters().FirstOrDefault();
+            var paramsObj = param == null ? new object[] { } : new[] { ConvertValue(paramValue, param.ParameterType) };
+            var task = action.Invoke(explorer, paramsObj) as Task;
             await task.ConfigureAwait(false);
             var resultProperty = task.GetType().GetProperty("Result");
             var obj = resultProperty.GetValue(task);
             obj = await IfLatestBlock(obj, explorer);
             Save(obj);
+        }
+
+        private object ConvertValue(string value, Type type)
+        {
+            if (type == typeof(long)) return Convert.ToInt64(value);
+            if (type != typeof(DateTime)) return value;
+            DateTime.TryParse(value, out var result);
+            return result;
         }
 
         private string ShortenName(string s)
@@ -75,9 +86,10 @@ namespace BlockChainExplorer1.Pages
             return prop.GetValue(_object).ToString();
         }
 
-        public string GetNavigationActionName(string propertyName)
+        public string GetNavigationActionName(string propertyName, object obj = null)
         {
-            return _navigations.FirstOrDefault(n => n.Type == _object.GetType().Name && n.PropertyName == propertyName)?.ActionName;
+            if (obj == null) obj = _object;
+            return _navigations.FirstOrDefault(n => n.Type == obj.GetType().Name && n.PropertyName == propertyName)?.ActionName;
         }
 
         public string InputTypeFromCsType(Type t)
@@ -87,13 +99,11 @@ namespace BlockChainExplorer1.Pages
             return "text";
         }
 
-        public PropertyInfo[] GetCollectionElementProps(PropertyInfo prop)
+        public object GetCollectionElement(PropertyInfo prop)
         {
             var collection = prop.GetValue(_object) as IEnumerable<object>;
             if (collection == null) return null;
-            var element = collection.FirstOrDefault();
-            if (element == null) return null;
-            return element.GetType().GetProperties();
+            return collection.FirstOrDefault();
         }
     }
 

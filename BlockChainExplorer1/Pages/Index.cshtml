@@ -2,6 +2,7 @@
 @using System.Collections
 @using System.Collections.ObjectModel
 @using System.Reflection
+@using Microsoft.AspNetCore.Mvc.Rendering
 @model IndexModel
 @{
     ViewData["Title"] = "Home page";
@@ -55,15 +56,32 @@
     @foreach (var prop in Model.CollectionProps ?? Enumerable.Empty<PropertyInfo>())
     {
         <h4>@prop.Name</h4>
-        var value = Model.GetValue(prop);
-        var collectionElementProps = Model.GetCollectionElementProps(prop);
+        var element = Model.GetCollectionElement(prop);
+        var props = element.GetType().GetProperties().Where(p=>!p.PropertyType.Name.Contains("Collection"));
 
-        <table style="padding-left: 10px">
-            @foreach (var collProp in collectionElementProps)
+        <table>
+            @foreach (var collProp in props)
             {
-                <tr><th>@collProp.Name</th></tr>
+                var navigationActionName = Model.GetNavigationActionName(collProp.Name, element);
+                var value = collProp.GetValue(element)?.ToString();
+
+                <tr>
+                    <td>@collProp.Name</td>
+                    <td>
+                        @if (navigationActionName != null)
+                        {
+                            @Html.ActionLink(value, "", new { actionName = navigationActionName, paramValue = value })
+                        }
+                        else
+                        {
+                            @value
+                        }
+                    </td>
+                </tr>
             }
         </table>
+        <button>Previous</button>
+        <button>Next</button>
     }
 </div>
 
