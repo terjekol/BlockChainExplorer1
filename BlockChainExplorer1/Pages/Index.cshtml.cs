@@ -52,7 +52,7 @@ namespace BlockChainExplorer1.Pages
         private async Task HandleRecentSearches(string actionName, string paramValue)
         {
             var userName = HttpContext.User.Identity.Name;
-            RecentSearches = _db.Search.Where(s => s.User == userName).AsEnumerable();
+            RecentSearches = _db.Search.Where(s => s.User == userName).OrderByDescending(s=>s.Id).AsEnumerable();
             _db.Search.Add(new Search() {ActionName = actionName, ParamValue = paramValue, User = userName});
             await _db.SaveChangesAsync();
         }

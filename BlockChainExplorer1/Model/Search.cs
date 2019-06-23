@@ -2,8 +2,9 @@
 {
     public class Search
     {
-        public string ActionName;
-        public string ParamValue;
-        public string User;
+        public long Id { get; set; }
+        public string ActionName { get; set; }
+        public string ParamValue { get; set; }
+        public string User { get; set; }
     }
 }
