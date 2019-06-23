@@ -1,10 +1,12 @@
 using System.Collections.Generic;
+using BlockChainExplorer1.Model;
 using Okta.AspNetCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -41,7 +43,7 @@ namespace BlockChainExplorer1
                 options.CheckConsentNeeded = context => true;
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
-
+            services.AddDbContext<BlockchainExplorerDbContext>(opt => opt.UseInMemoryDatabase("Search"));
 
             services.AddMvc()
                 .AddRazorPagesOptions(options =>

@@ -2,6 +2,7 @@
 @using System.Collections
 @using System.Collections.ObjectModel
 @using System.Reflection
+@using BlockChainExplorer1.Model
 @using Microsoft.AspNetCore.Mvc.Rendering
 @model IndexModel
 @{
@@ -9,6 +10,7 @@
 }
 
 <div>
+    <h3>Menu</h3>
     <div style="">
         <select onchange="show('Get' + this.value + 'Async')">
             @foreach (var action in Model.ActionNames)
@@ -22,12 +24,21 @@
                 @Html.Hidden("actionName", action.Name)
                 @foreach (var param in action.GetParameters())
                 {
-                    @param.Name <input name="paramValue" type="@{ Model.InputTypeFromCsType(@param.ParameterType); }" />
+                    @param.Name
+                    <input name="paramValue" type="@{ Model.InputTypeFromCsType(@param.ParameterType); }" />
                 }
                 <input type="submit" value="Search" />
             </form>
         }
     </div>
+    <h3>Recent Searches</h3>
+    <table>
+        <tr><td>Action</td><td>Parameter</td></tr>
+        @foreach (var search in Model.RecentSearches ?? Enumerable.Empty<Search>())
+        {
+            <tr><td>@search.ActionName</td><td>@search.ParamValue</td></tr>
+        }
+    </table>
     @if (Model.ActionName != null)
     {
         <h3>@Model.ActionName</h3>

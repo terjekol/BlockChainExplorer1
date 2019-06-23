@@ -4,16 +4,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using BlockChainExplorer1.Model;
 using Info.Blockchain.API.BlockExplorer;
 using Info.Blockchain.API.Models;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.IdentityModel.Xml;
-using Newtonsoft.Json;
 
 namespace BlockChainExplorer1.Pages
 {
     public class IndexModel : PageModel
     {
+        private BlockchainExplorerDbContext _db;
         private object _object;
         public string ActionName { get; private set; }
         public PropertyInfo[] SimpleProps { get; private set; }
@@ -21,7 +21,13 @@ namespace BlockChainExplorer1.Pages
         public IEnumerable<MethodInfo> Actions { get; private set; }
         public IEnumerable<string> ActionNames { get; private set; }
         public bool IsCollection { get; private set; }
+        public IEnumerable<Search> RecentSearches { get; set; }
 
+
+        public IndexModel(BlockchainExplorerDbContext db)
+        {
+            _db = db;
+        }
 
         private readonly Navigation[] _navigations =
         {
@@ -31,17 +37,29 @@ namespace BlockChainExplorer1.Pages
             new Navigation("Block", "Height", "BlocksAtHeight"),
         };
 
-
         public async Task OnGet(string actionName, string paramValue)
         {
-            ActionName = ShortenName(actionName);
-            Actions = typeof(BlockExplorer)
-                .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance)
-                .Where(m => m.GetParameters().Length <= 1);
-            ActionNames = Actions.Select(m => ShortenName(m.Name));
+            CreateActions();
             if (actionName == null) return;
+            ActionName = ShortenName(actionName);
             var action = Actions.SingleOrDefault(a => a.Name.Contains(actionName));
             if (action == null) return;
+            var obj = await DoAction(paramValue, action);
+            Save(obj);
+            await HandleRecentSearches(actionName, paramValue);
+        }
+
+        private async Task HandleRecentSearches(string actionName, string paramValue)
+        {
+            var userName = HttpContext.User.Identity.Name;
+            RecentSearches = _db.Search.Where(s => s.User == userName).AsEnumerable();
+            _db.Search.Add(new Search() {ActionName = actionName, ParamValue = paramValue, User = userName});
+            await _db.SaveChangesAsync();
+        }
+
+
+        private async Task<object> DoAction(string paramValue, MethodInfo action)
+        {
             var explorer = new BlockExplorer();
             var param = action.GetParameters().FirstOrDefault();
             var paramsObj = param == null ? new object[] { } : new[] { ConvertValue(paramValue, param.ParameterType) };
@@ -51,7 +69,15 @@ namespace BlockChainExplorer1.Pages
             var obj = resultProperty.GetValue(task);
             obj = IfCollection(obj);
             obj = await IfLatestBlock(obj, explorer);
-            Save(obj);
+            return obj;
+        }
+
+        private void CreateActions()
+        {
+            Actions = typeof(BlockExplorer)
+                .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance)
+                .Where(m => m.GetParameters().Length <= 1);
+            ActionNames = Actions.Select(m => ShortenName(m.Name));
         }
 
         private object IfCollection(object o)
