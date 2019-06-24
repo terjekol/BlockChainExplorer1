@@ -32,9 +32,11 @@ namespace BlockChainExplorer1.Pages
         private readonly Link[] _links =
         {
             new Link("Block", "PreviousBlockHash", "GetBlockByHashAsync"),
+            new Link("SimpleBlock", "Hash", "GetBlockByHashAsync"),
             new Link("Transaction", "Hash", "GetTransactionByHashAsync"),
             new Link("Transaction", "Index", "GetTransactionByIndexAsync"),
             new Link("Block", "Height", "GetBlocksAtHeightAsync"),
+            new Link("SimpleBlock", "Height", "GetBlocksAtHeightAsync"),
         };
 
         public async Task OnGet(string actionName, string paramValue, int[] indexes)
@@ -144,11 +146,18 @@ namespace BlockChainExplorer1.Pages
             return "text";
         }
 
-        public object GetCollectionElement(PropertyInfo prop)
+        public object GetCollectionElement(PropertyInfo prop, int collectionIndex)
         {
             var collection = prop.GetValue(_object) as IEnumerable<object>;
             if (collection == null) return null;
-            return collection.FirstOrDefault();
+            var skipCount = CurrentSearch.GetCollectionNo(collectionIndex) - 1;
+            return collection.Skip(skipCount).FirstOrDefault();
+        }
+
+        public int GetCollectionCount(PropertyInfo prop, int collectionIndex)
+        {
+            var collection = prop.GetValue(_object) as IEnumerable<object>;
+            return collection?.Count() ?? 0;
         }
     }
 

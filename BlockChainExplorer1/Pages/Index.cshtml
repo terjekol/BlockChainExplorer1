@@ -56,16 +56,18 @@
             <h3>@Model.ActionName</h3>
             @if (Model.Collection != null)
             {
-                <span>Showing #@Model.CurrentSearch?.MainCollectionNo of @Model.Collection.Count</span>
-                @if (Model.CurrentSearch?.MainCollectionNo > 1)
-                 {
-                     @Html.ActionLink("Previous", "", Model.CurrentSearch.GetParamsObj(-1));
-                 }
+                var mainCollectionNo = Model.CurrentSearch?.GetCollectionNo(0);
 
-                @if (Model.CurrentSearch?.MainCollectionNo < Model.Collection.Count)
-                 {
-                     @Html.ActionLink("Next", "", Model.CurrentSearch.GetParamsObj(1));
-                 }
+                <span>Showing #@mainCollectionNo of @Model.Collection.Count</span>
+                @if (mainCollectionNo > 1)
+                {
+                    @Html.ActionLink("Previous", "", Model.CurrentSearch.GetParamsObj(-1));
+                }
+                <span></span>
+                @if (mainCollectionNo < Model.Collection.Count)
+                {
+                    @Html.ActionLink("Next", "", Model.CurrentSearch.GetParamsObj(1));
+                }
             }
         }
         <table class="values">
@@ -89,35 +91,51 @@
             }
         </table>
 
-        @foreach (var prop in Model.CollectionProps ?? Enumerable.Empty<PropertyInfo>())
+        @if (Model.CollectionProps != null && Model.CollectionProps.Length > 0)
         {
-            <h4>@prop.Name</h4>
-            var element = Model.GetCollectionElement(prop);
-            var props = element.GetType().GetProperties().Where(p => !p.PropertyType.Name.Contains("Collection"));
+            for (var index = 0; index < Model.CollectionProps.Length; index++)
+            {
+                var prop = Model.CollectionProps[index];
+                <h4>@prop.Name</h4>
+                var collectionCount = Model.GetCollectionCount(prop, index);
+                var collection = Model.GetCollectionElement(prop, index);
+                    
+                var props = collection.GetType().GetProperties().Where(p => !p.PropertyType.Name.Contains("Collection"));
+                var collectionNo = Model.CurrentSearch?.GetCollectionNo(index+1);
 
-            <table class="values">
-                @foreach (var collProp in props)
-                {
-                    var navigationActionName = Model.GetNavigationActionName(collProp.Name, element);
-                    var value = collProp.GetValue(element)?.ToString();
+                <span>Showing #@collectionNo of @collectionCount</span>
+                @if (collectionNo > 1)
+                 {
+                     @Html.ActionLink("Previous", "", Model.CurrentSearch.GetParamsObj(-1, index+1));
+                 }
+                <span></span>
+                @if (collectionNo < collectionCount)
+                 {
+                     @Html.ActionLink("Next", "", Model.CurrentSearch.GetParamsObj(1, index+1));
+                 }
 
-                    <tr>
-                        <td>@collProp.Name</td>
-                        <td class="content">
-                            @if (navigationActionName != null)
-                            {
-                                @Html.ActionLink(value, "", new { actionName = navigationActionName, paramValue = value })
-                            }
-                            else
-                            {
-                                @value
-                            }
-                        </td>
-                    </tr>
-                }
-            </table>
-            <button>Previous</button>
-            <button>Next</button>
+                <table class="values">
+                    @foreach (var collProp in props)
+                    {
+                        var navigationActionName = Model.GetNavigationActionName(collProp.Name, collection);
+                        var value = collProp.GetValue(collection)?.ToString();
+
+                        <tr>
+                            <td>@collProp.Name</td>
+                            <td class="content">
+                                @if (navigationActionName != null)
+                                {
+                                    @Html.ActionLink(value, "", new {actionName = navigationActionName, paramValue = value})
+                                }
+                                else
+                                {
+                                    @value
+                                }
+                            </td>
+                        </tr>
+                    }
+                </table>
+            }
         }
     </div>
     @if (Model.RecentSearches != null && Model.RecentSearches.Any())

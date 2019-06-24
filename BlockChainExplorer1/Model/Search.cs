@@ -12,18 +12,22 @@ namespace BlockChainExplorer1.Model
         [NotMapped]
         public List<int> Indexes { get; set; }
 
-        public int MainCollectionNo => Indexes.Count == 0 ? 1 : Indexes[0] + 1;
+        public int GetCollectionNo(int index)
+        {
+            return index >= Indexes.Count ? 1 : Indexes[index] + 1;
+        }
 
         public object GetParamsObj(int delta, int index = 0)
         {
             while (Indexes.Count < index + 1) Indexes.Add(0);
-            Indexes[index] += delta;
+            var indexes = Indexes.ToArray();
+            indexes[index] += delta;
 
             return new
             {
                 actionName = ActionName,
                 paramValue = ParamValue,
-                indexes = Indexes.ToArray()
+                indexes = indexes
             };
         }
     }
