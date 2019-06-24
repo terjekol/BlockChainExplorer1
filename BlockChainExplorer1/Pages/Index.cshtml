@@ -54,10 +54,18 @@
         {
             <hr />
             <h3>@Model.ActionName</h3>
-            @if (Model.IsCollection)
+            @if (Model.Collection != null)
             {
-                <button>Previous</button>
-                <button>Next</button>
+                <span>Showing #@Model.CurrentSearch?.MainCollectionNo of @Model.Collection.Count</span>
+                @if (Model.CurrentSearch?.MainCollectionNo > 1)
+                 {
+                     @Html.ActionLink("Previous", "", Model.CurrentSearch.GetParamsObj(-1));
+                 }
+
+                @if (Model.CurrentSearch?.MainCollectionNo < Model.Collection.Count)
+                 {
+                     @Html.ActionLink("Next", "", Model.CurrentSearch.GetParamsObj(1));
+                 }
             }
         }
         <table class="values">
@@ -116,13 +124,13 @@
     {
         <div style="margin-left: 80px; padding: 10px; border: 1px solid gray; border-radius: 10px">
             <h3>Recent Searches</h3>
-                @foreach (var search in Model.RecentSearches)
-                {
-                    var val = search.ParamValue;
-                    var paramTxt = val == null || val?.Length < 10 ? val : val?.Substring(0, 10) + "...";
-                    var paramObj = new {actionName=search.ActionName, paramValue=val};
-                    @Html.ActionLink(Model.ShortenName(search.ActionName) + " " + paramTxt, "", paramObj)<br/>
-                }
+            @foreach (var search in Model.RecentSearches)
+            {
+                var val = search.ParamValue;
+                var paramTxt = val == null || val?.Length < 10 ? val : val?.Substring(0, 10) + "...";
+                var paramObj = new { actionName = search.ActionName, paramValue = val };
+                @Html.ActionLink(Model.ShortenName(search.ActionName) + " " + paramTxt, "", paramObj)<br />
+            }
         </div>
     }
 </div>

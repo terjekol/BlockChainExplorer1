@@ -8,43 +8,43 @@ using BlockChainExplorer1.Model;
 using Info.Blockchain.API.BlockExplorer;
 using Info.Blockchain.API.Models;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore.Internal;
 
 namespace BlockChainExplorer1.Pages
 {
     public class IndexModel : PageModel
     {
-        private BlockchainExplorerDbContext _db;
+        private readonly BlockchainExplorerDbContext _db;
         private object _object;
         public string ActionName { get; private set; }
         public PropertyInfo[] SimpleProps { get; private set; }
         public PropertyInfo[] CollectionProps { get; private set; }
         public IEnumerable<MethodInfo> Actions { get; private set; }
-        public bool IsCollection { get; private set; }
+        public ICollection Collection { get; private set; }
         public IEnumerable<Search> RecentSearches { get; set; }
         public Search CurrentSearch { get; set; }
-
 
         public IndexModel(BlockchainExplorerDbContext db)
         {
             _db = db;
         }
 
-        private readonly Navigation[] _navigations =
+        private readonly Link[] _links =
         {
-            new Navigation("Block", "PreviousBlockHash", "GetBlockByHashAsync"),
-            new Navigation("Transaction", "Hash", "GetTransactionByHashAsync"),
-            new Navigation("Transaction", "Index", "GetTransactionByIndexAsync"),
-            new Navigation("Block", "Height", "GetBlocksAtHeightAsync"),
+            new Link("Block", "PreviousBlockHash", "GetBlockByHashAsync"),
+            new Link("Transaction", "Hash", "GetTransactionByHashAsync"),
+            new Link("Transaction", "Index", "GetTransactionByIndexAsync"),
+            new Link("Block", "Height", "GetBlocksAtHeightAsync"),
         };
 
-        public async Task OnGet(string actionName, string paramValue)
+        public async Task OnGet(string actionName, string paramValue, int[] indexes)
         {
             CreateActions();
             if (actionName == null) return;
             ActionName = ShortenName(actionName);
             var action = Actions.SingleOrDefault(a => a.Name.Contains(actionName));
             if (action == null) return;
-            CurrentSearch = new Search { ActionName = actionName, ParamValue = paramValue };
+            CurrentSearch = new Search { ActionName = actionName, ParamValue = paramValue, Indexes = new List<int>(indexes)};
             var obj = await DoAction(paramValue, action);
             Save(obj);
             await HandleRecentSearches(actionName, paramValue);
@@ -82,10 +82,15 @@ namespace BlockChainExplorer1.Pages
 
         private object IfCollection(object o)
         {
-            var enumerable = o as IEnumerable;
-            if (enumerable == null) return o;
-            IsCollection = true;
-            var enumerator = enumerable.GetEnumerator();
+            var collection = o as ICollection;
+            if (collection == null) return o;
+            Collection = collection;
+            var enumerator = collection.GetEnumerator();
+            if (CurrentSearch.Indexes.Count > 0)
+            {
+                var skipCount = CurrentSearch.Indexes[0];
+                while(skipCount-->0) enumerator.MoveNext();
+            }
             enumerator.MoveNext();
             return enumerator.Current;
         }
@@ -129,7 +134,7 @@ namespace BlockChainExplorer1.Pages
         public string GetNavigationActionName(string propertyName, object obj = null)
         {
             if (obj == null) obj = _object;
-            return _navigations.FirstOrDefault(n => n.Type == obj.GetType().Name && n.PropertyName == propertyName)?.ActionName;
+            return _links.FirstOrDefault(n => n.Type == obj.GetType().Name && n.PropertyName == propertyName)?.ActionName;
         }
 
         public string InputTypeFromCsType(Type t)
@@ -147,13 +152,13 @@ namespace BlockChainExplorer1.Pages
         }
     }
 
-    public class Navigation
+    public class Link
     {
         public string Type;
         public string PropertyName;
         public string ActionName;
 
-        public Navigation(string type, string propertyName, string actionName)
+        public Link(string type, string propertyName, string actionName)
         {
             Type = type;
             PropertyName = propertyName;
