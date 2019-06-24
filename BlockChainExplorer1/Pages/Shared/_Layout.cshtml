@@ -37,11 +37,7 @@
                         <li>
                             @if (User.Identity.IsAuthenticated)
                             {
-                                <b>Hello, @User.Identity.Name</b>
-                            }
-                            else
-                            {
-                                <b>You are not logged in.</b>
+                                <a>Logout @User.Identity.Name</a>
                             }
                         </li>
                     </ul>

@@ -9,84 +9,68 @@
     ViewData["Title"] = "Home page";
 }
 
-<div>
-    <h3>Menu</h3>
-    <div style="">
-        <select onchange="show('Get' + this.value + 'Async')">
-            @foreach (var action in Model.ActionNames)
-            {
-                <option>@action</option>
-            }
-        </select>
-        @foreach (var action in Model.Actions)
-        {
-            <form id="@action.Name" style="display: none">
-                @Html.Hidden("actionName", action.Name)
-                @foreach (var param in action.GetParameters())
+
+<div style="display: flex;flex-direction: row">
+    <div>
+        <h3>Menu</h3>
+        <div style="">
+            <select onchange="show(this.value)">
+                @if (Model.CurrentSearch == null)
                 {
-                    @param.Name
-                    <input name="paramValue" type="@{ Model.InputTypeFromCsType(@param.ParameterType); }" />
+                    <option value="blank"></option>
                 }
-                <input type="submit" value="Search" />
-            </form>
-        }
-    </div>
-    <h3>Recent Searches</h3>
-    <table>
-        <tr><td>Action</td><td>Parameter</td></tr>
-        @foreach (var search in Model.RecentSearches ?? Enumerable.Empty<Search>())
-        {
-            <tr><td>@search.ActionName</td><td>@search.ParamValue</td></tr>
-        }
-    </table>
-    @if (Model.ActionName != null)
-    {
-        <h3>@Model.ActionName</h3>
-        @if (Model.IsCollection)
-        {
-            <button>Previous</button>
-            <button>Next</button>
-        }
-    }
-    <table>
-        @foreach (var prop in Model.SimpleProps ?? Enumerable.Empty<PropertyInfo>())
-        {
-            var navigationActionName = Model.GetNavigationActionName(prop.Name);
-            var value = Model.GetValue(prop);
-            <tr>
-                <th>@prop.Name</th>
-                <td>
-                    @if (navigationActionName != null)
-                    {
-                        @Html.ActionLink(@value, "", new { actionName = navigationActionName, paramValue = value })
-                    }
-                    else
-                    {
-                        @value
-                    }
-                </td>
-            </tr>
-        }
-    </table>
-
-    @foreach (var prop in Model.CollectionProps ?? Enumerable.Empty<PropertyInfo>())
-    {
-        <h4>@prop.Name</h4>
-        var element = Model.GetCollectionElement(prop);
-        var props = element.GetType().GetProperties().Where(p => !p.PropertyType.Name.Contains("Collection"));
-
-        <table>
-            @foreach (var collProp in props)
+                @foreach (var action in Model.Actions)
+                {
+                    var actionName = Model.ShortenName(action.Name);
+                    var selected = Model.CurrentSearch != null && action.Name == Model.CurrentSearch.ActionName;
+                    var selectedStr = selected ? "selected" : null;
+                    <option value="@action.Name" selected="@selectedStr">@actionName</option>
+                }
+            </select>
+            @if (Model.CurrentSearch == null)
             {
-                var navigationActionName = Model.GetNavigationActionName(collProp.Name, element);
-                var value = collProp.GetValue(element)?.ToString();
-
+                <form id="blank" style="display: inline">
+                    Please select one of the options in the drop down.
+                </form>
+            }
+            @foreach (var action in Model.Actions)
+            {
+                var selected = Model.CurrentSearch != null && action.Name == Model.CurrentSearch.ActionName;
+                var display = selected ? "display: inline" : "display: none";
+                var actionName = "Get" + Model.ShortenName(action.Name);
+                actionName = string.Concat(actionName.Select(x => Char.IsUpper(x) ? " " + x : x.ToString())).TrimStart(' ');
+                <form id="@action.Name" style="@display">
+                    @Html.Hidden("actionName", action.Name)
+                    @foreach (var param in action.GetParameters())
+                    {
+                        @param.Name
+                        <input name="paramValue" type="@Model.InputTypeFromCsType(@param.ParameterType)" value="@Model.CurrentSearch?.ParamValue" />
+                    }
+                    <input type="submit" value="@actionName" />
+                </form>
+            }
+        </div>
+        @if (Model.ActionName != null)
+        {
+            <hr />
+            <h3>@Model.ActionName</h3>
+            @if (Model.IsCollection)
+            {
+                <button>Previous</button>
+                <button>Next</button>
+            }
+        }
+        <table class="values">
+            @foreach (var prop in Model.SimpleProps ?? Enumerable.Empty<PropertyInfo>())
+            {
+                var navigationActionName = Model.GetNavigationActionName(prop.Name);
+                var value = Model.GetValue(prop);
                 <tr>
-                    <td>@collProp.Name</td>
-                    <td>
+                    <th>@prop.Name</th>
+                    <td class="content">
                         @if (navigationActionName != null)
                         {
-                            @Html.ActionLink(value, "", new { actionName = navigationActionName, paramValue = value })
+                            @Html.ActionLink(@value, "", new { actionName = navigationActionName, paramValue = value })
                         }
                         else
                         {
@@ -96,8 +80,50 @@
                 </tr>
             }
         </table>
-        <button>Previous</button>
-        <button>Next</button>
+
+        @foreach (var prop in Model.CollectionProps ?? Enumerable.Empty<PropertyInfo>())
+        {
+            <h4>@prop.Name</h4>
+            var element = Model.GetCollectionElement(prop);
+            var props = element.GetType().GetProperties().Where(p => !p.PropertyType.Name.Contains("Collection"));
+
+            <table class="values">
+                @foreach (var collProp in props)
+                {
+                    var navigationActionName = Model.GetNavigationActionName(collProp.Name, element);
+                    var value = collProp.GetValue(element)?.ToString();
+
+                    <tr>
+                        <td>@collProp.Name</td>
+                        <td class="content">
+                            @if (navigationActionName != null)
+                            {
+                                @Html.ActionLink(value, "", new { actionName = navigationActionName, paramValue = value })
+                            }
+                            else
+                            {
+                                @value
+                            }
+                        </td>
+                    </tr>
+                }
+            </table>
+            <button>Previous</button>
+            <button>Next</button>
+        }
+    </div>
+    @if (Model.RecentSearches != null && Model.RecentSearches.Any())
+    {
+        <div style="margin-left: 80px; padding: 10px; border: 1px solid gray; border-radius: 10px">
+            <h3>Recent Searches</h3>
+                @foreach (var search in Model.RecentSearches)
+                {
+                    var val = search.ParamValue;
+                    var paramTxt = val == null || val?.Length < 10 ? val : val?.Substring(0, 10) + "...";
+                    var paramObj = new {actionName=search.ActionName, paramValue=val};
+                    @Html.ActionLink(Model.ShortenName(search.ActionName) + " " + paramTxt, "", paramObj)<br/>
+                }
+        </div>
     }
 </div>
 

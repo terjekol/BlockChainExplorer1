@@ -19,9 +19,9 @@ namespace BlockChainExplorer1.Pages
         public PropertyInfo[] SimpleProps { get; private set; }
         public PropertyInfo[] CollectionProps { get; private set; }
         public IEnumerable<MethodInfo> Actions { get; private set; }
-        public IEnumerable<string> ActionNames { get; private set; }
         public bool IsCollection { get; private set; }
         public IEnumerable<Search> RecentSearches { get; set; }
+        public Search CurrentSearch { get; set; }
 
 
         public IndexModel(BlockchainExplorerDbContext db)
@@ -31,10 +31,10 @@ namespace BlockChainExplorer1.Pages
 
         private readonly Navigation[] _navigations =
         {
-            new Navigation("Block", "PreviousBlockHash", "GetBlockByHash"),
-            new Navigation("Transaction", "Hash", "GetTransactionByHash"),
-            new Navigation("Transaction", "Index", "GetTransactionByIndex"),
-            new Navigation("Block", "Height", "BlocksAtHeight"),
+            new Navigation("Block", "PreviousBlockHash", "GetBlockByHashAsync"),
+            new Navigation("Transaction", "Hash", "GetTransactionByHashAsync"),
+            new Navigation("Transaction", "Index", "GetTransactionByIndexAsync"),
+            new Navigation("Block", "Height", "GetBlocksAtHeightAsync"),
         };
 
         public async Task OnGet(string actionName, string paramValue)
@@ -44,6 +44,7 @@ namespace BlockChainExplorer1.Pages
             ActionName = ShortenName(actionName);
             var action = Actions.SingleOrDefault(a => a.Name.Contains(actionName));
             if (action == null) return;
+            CurrentSearch = new Search { ActionName = actionName, ParamValue = paramValue };
             var obj = await DoAction(paramValue, action);
             Save(obj);
             await HandleRecentSearches(actionName, paramValue);
@@ -52,8 +53,8 @@ namespace BlockChainExplorer1.Pages
         private async Task HandleRecentSearches(string actionName, string paramValue)
         {
             var userName = HttpContext.User.Identity.Name;
-            RecentSearches = _db.Search.Where(s => s.User == userName).OrderByDescending(s=>s.Id).AsEnumerable();
-            _db.Search.Add(new Search() {ActionName = actionName, ParamValue = paramValue, User = userName});
+            RecentSearches = _db.Search.Where(s => s.User == userName).OrderByDescending(s => s.Id).AsEnumerable();
+            _db.Search.Add(new Search() { ActionName = actionName, ParamValue = paramValue, User = userName });
             await _db.SaveChangesAsync();
         }
 
@@ -77,7 +78,6 @@ namespace BlockChainExplorer1.Pages
             Actions = typeof(BlockExplorer)
                 .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Instance)
                 .Where(m => m.GetParameters().Length <= 1);
-            ActionNames = Actions.Select(m => ShortenName(m.Name));
         }
 
         private object IfCollection(object o)
@@ -99,7 +99,7 @@ namespace BlockChainExplorer1.Pages
             return result;
         }
 
-        private string ShortenName(string s)
+        public string ShortenName(string s)
         {
             if (s == null) return s;
             return s.Replace("Get", "").Replace("Async", "");
