@@ -134,7 +134,7 @@ namespace BlockChainExplorer1.Pages
 
         public string InputTypeFromCsType(Type t)
         {
-            if (t == typeof(DateTime)) return "datetime";
+            if (t == typeof(DateTime)) return "date";
             if (t == typeof(long)) return "number";
             return "text";
         }
